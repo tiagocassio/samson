@@ -46,6 +46,7 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
       # as we configure each client, check to see if the config has a token in it,
       # if it does, then we don't need to worry about going and getting one
       @writers = vault_hosts.map do |vault_server|
+        @vault_instance = vault_server["vault_instance"]
         if vault_server["vault_token"].present?
           writer = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(verify_mode: vault_server["tls_verify"]))
           writer.token = File.read(vault_server["vault_token"]).strip
@@ -80,6 +81,7 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
     # if anything fails
     def write(key, data)
       @writers.each do |vault_server|
+        debugger
         Vault.with_retries(Vault::HTTPConnectionError, attempts: 5) do
           vault_server.logical.write(key, data)
         end
