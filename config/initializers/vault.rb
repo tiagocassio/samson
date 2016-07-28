@@ -45,11 +45,12 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
       # talk to them
       # as we configure each client, check to see if the config has a token in it,
       # if it does, then we don't need to worry about going and getting one
-      @writers = vault_hosts.map do |vault_server|
-        @vault_instance = vault_server["vault_instance"]
+      @vaults = {}
+      vault_hosts.each do |vault_server|
+        instance = vault_server["vault_instance"]
         if vault_server["vault_token"].present?
-          writer = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(ssl_verify: vault_server["tls_verify"]))
-          writer.token = File.read(vault_server["vault_token"]).strip
+          @vaults[instance] = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(ssl_verify: vault_server["tls_verify"]))
+          @vaults[instance].token = File.read(vault_server["vault_token"]).strip
         else
           pemfile = File.read(vault_server["vault_auth_pem"])
           client_cert_options = {
@@ -61,45 +62,39 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
           writer = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(client_cert_options))
           writer.token = VaultClient.auth_token(vault_server["vault_address"])
         end
-        writer.address = vault_server["vault_address"]
-        writer.ssl_ca_cert = vault_server["ca_cert"] if vault_server["ca_cert"]
-        writer
+        @vaults[instance].address = vault_server["vault_address"]
+        @vaults[instance].ssl_ca_cert = vault_server["ca_cert"] if vault_server["ca_cert"]
       end
-      @reader = @writers.first
     end
 
+    # normally we'll only get a single instance back.  if it's global, just read it once
     def read(key)
-      @reader.logical.read(key)
+      vault_instances(key).first.logical.read(key)
     end
 
     def list(path)
-      @reader.logical.list(path)
+      @vaults.flat_map { |vault| vault.pop.logical.list(path) }
     end
 
     # make darn sure on deletes and writes that we try a couple of times.
     # not going to catch any other excpeptions as we want this to blow up
     # if anything fails
     def write(key, data)
-      @writers.each do |vault_server|
-        debugger
-        Vault.with_retries(Vault::HTTPConnectionError, attempts: 5) do
-          vault_server.logical.write(key, data)
-        end
+      Vault.with_retries(Vault::HTTPConnectionError, attempts: 5) do
+        vault_instances(key).each { |v| v.logical.write(key, data) }
       end
     end
 
     def delete(key)
-      @writers.each do |vault_server|
-        Vault.with_retries(Vault::HTTPConnectionError, attempts: 5) do
-          vault_server.logical.delete(key)
-        end
+      Vault.with_retries(Vault::HTTPConnectionError, attempts: 5) do
+        vault_instances(key).each { |v| v.logical.delete(key) }
       end
     end
 
-    def config_for(deploy_group_name)
-      vault_hosts.detect do |hash|
-        hash.fetch('deploy_groups', []).include? deploy_group_name
-      end
+    def self.available_instances
+      client = self.new
+      client.send(:ensure_config_exists)
+      JSON.parse(File.read(client.send(:vault_config_file))).map { |v| v["vault_instance"] }
     end
 
     private
@@ -116,6 +111,21 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
 
     def vault_config_file
       ENV['VAULT_CONFIG_FILE'] || Rails.root.join("config/vault.json")
+    end
+
+    # get back the vault instance that's required for this pod.  we'll take
+    # the key, and look up the instance or return all of 'em if it's a global key
+    def vault_instances(key = nil)
+      deploy_group = key.split('/')[4]
+      if deploy_group == 'global'
+        @vaults.map { |vault| vault.pop }
+      else
+        deploy_group = DeployGroup.find_by_name(deploy_group)
+        if deploy_group.nil?
+          raise "no vault_instance configured for deploy group #{deploy_group}"
+        end
+        [@vaults[deploy_group.vault_instance]]
+      end
     end
   end
 end
