@@ -46,7 +46,7 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
       # if it does, then we don't need to worry about going and getting one
       @vaults = {}
       vault_hosts.each do |vault_server|
-        instance = vault_server["vault_instance"]
+        instance = vault_server.fetch("vault_instance")
         if vault_server["vault_token"].present?
           @vaults[instance] = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(ssl_verify: vault_server["tls_verify"]))
           @vaults[instance].token = File.read(vault_server["vault_token"]).strip
