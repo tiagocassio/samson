@@ -80,7 +80,8 @@ module SecretStorage
 
       def keys
         keys = vault_client.list(VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE)
-        keys = keys_recursive(keys).uniq # flatten all the keys since the pod/vault association is included now
+        keys = keys_recursive(keys).uniq # we read from multiple backends that might have the same keys
+        key.uniq!
         keys.map! do |secret_path|
           convert_path(secret_path, :decode) # FIXME: ideally only decode the key(#4) part
         end
