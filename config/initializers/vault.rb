@@ -72,7 +72,7 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
     end
 
     def list(path)
-      @vaults.each_value { |vault| vault.logical.list(path) }
+      @vaults.each_value.flat_map { |vault| vault.logical.list(path) }
     end
 
     # make darn sure on deletes and writes that we try a couple of times.
@@ -119,7 +119,8 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
     # get back the vault instance that's required for this pod.  we'll take
     # the key, and look up the instance or return all of 'em if it's a global key
     def vault_instances(key = nil)
-      deploy_group = key.split('/')[4]
+      # parse_secret_key doesn't know about the namespace etc, so strip it off
+      deploy_group = SecretStorage.parse_secret_key(key.split('/',3).pop).fetch(:deploy_group_permalink)
       if deploy_group == 'global'
         @vaults.map { |vault| vault.pop }
       else
