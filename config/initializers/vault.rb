@@ -72,7 +72,7 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
     end
 
     def list(path)
-      @vaults.flat_map { |vault| vault.pop.logical.list(path) }
+      @vaults.each_value { |vault| vault.logical.list(path) }
     end
 
     # make darn sure on deletes and writes that we try a couple of times.
