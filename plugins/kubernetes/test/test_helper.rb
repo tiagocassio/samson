@@ -44,8 +44,7 @@ class VaultClient
   def config_for(deploy_group_name)
     {
       'vault_address' => 'https://test.hvault.server',
-      'deploy_groups' => [deploy_group_name, 'other_deploy_group'],
-      'tls_verify' => false
+      'tls_verify' => false, "vault_instance": deploy_group_name
     }
   end
 
