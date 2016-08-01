@@ -59,4 +59,11 @@ describe ApplicationController do
       end
     end
   end
+
+  describe 'Doorkeeper Auth Status' do
+    subject { @controller }
+    it 'is disallowed' do
+      subject.api_accessible.must_equal false
+    end
+  end
 end
