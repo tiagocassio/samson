@@ -1,4 +1,3 @@
-require 'byebug'
 if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
   require 'vault'
   Rails.logger.info("Vault Client enabled")
