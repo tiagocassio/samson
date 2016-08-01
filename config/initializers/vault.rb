@@ -97,6 +97,10 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
       JSON.parse(File.read(client.send(:vault_config_file))).map { |v| v["vault_instance"] }
     end
 
+    def config_for(instance_name)
+      vault_hosts.detect { |vault| vault["vault_instance"] == instance_name }
+    end
+
     private
 
     def ensure_config_exists

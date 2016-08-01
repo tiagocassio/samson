@@ -160,8 +160,23 @@ describe SecretStorage do
     let(:client) { SecretStorage::HashicorpVault.send(:vault_client) }
     let(:secret_namespace) { "secret/apps/" }
 
+    around do |t|
+      @dir = Dir.mktmpdir
+      Dir.chdir(@dir) {t.call}
+    end
+
     before { client.clear }
     after { client.verify! }
+
+    describe "missing config file" do
+      before { client.remove_config }
+      after { client.create_config }
+      it "fails without a config file" do
+        assert_raises RuntimeError do
+          client.ensure_config_exists
+        end
+      end
+    end
 
     describe ".read" do
       it "gets a value based on a key with /secret" do

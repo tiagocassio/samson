@@ -3,6 +3,7 @@ require_relative '../lib/samson_kubernetes/hash_kuber_selector'
 
 # Mock up vault client
 class VaultClient
+  CONFIG_FILE="vault.json".freeze
   def logical
     @logical ||= Logical.new
   end
@@ -16,6 +17,8 @@ class VaultClient
   end
 
   def initialize
+    create_config
+    ensure_config_exists
     @expected = {}
     @set = {}
   end
@@ -44,6 +47,23 @@ class VaultClient
       'deploy_groups' => [deploy_group_name, 'other_deploy_group'],
       'tls_verify' => false
     }
+  end
+
+  def ensure_config_exists
+    raise "config file missing" unless File.exist?(CONFIG_FILE)
+  end
+
+  def create_config
+    vault_json = <<END_JSON
+{
+  "vault_token": "/foo/bar.token", "vault_address": "https://10.10.10.10:8200", "tls_verify": false, "vault_instance": "superman"
+}
+END_JSON
+    File.write(CONFIG_FILE, vault_json)
+  end
+
+  def remove_config
+#    File.delete(CONFIG_FILE)
   end
 
   # test hooks
