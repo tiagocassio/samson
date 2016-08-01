@@ -48,21 +48,21 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
       vault_hosts.each do |vault_server|
         instance = vault_server.fetch("vault_instance")
         if vault_server["vault_token"].present?
-          @vaults[instance] = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(ssl_verify: vault_server["tls_verify"]))
-          @vaults[instance].token = File.read(vault_server["vault_token"]).strip
+          @vaults[instance] = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(ssl_verify: vault_server.fetch("tls_verify")))
+          @vaults[instance].token = File.read(vault_server.fetch("vault_token")).strip
         else
-          pemfile = File.read(vault_server["vault_auth_pem"])
+          pemfile = File.read(vault_server.fetch("vault_auth_pem"))
           client_cert_options = {
             cert: OpenSSL::X509::Certificate.new(pemfile),
             key: OpenSSL::PKey::RSA.new(pemfile),
-            ssl_pem_file: vault_server["vault_auth_pem"],
-            verify_mode: vault_server["tls_verify"]
+            ssl_pem_file: vault_server.fetch("vault_auth_pem"),
+            verify_mode: vault_server.fetch("tls_verify")
           }
           writer = Vault::Client.new(DEFAULT_CLIENT_OPTIONS.merge(client_cert_options))
           writer.token = VaultClient.auth_token(vault_server["vault_address"])
         end
-        @vaults[instance].address = vault_server["vault_address"]
-        @vaults[instance].ssl_ca_cert = vault_server["ca_cert"] if vault_server["ca_cert"]
+        @vaults[instance].address = vault_server.fetch("vault_address")
+        @vaults[instance].ssl_ca_cert = vault_server.fetch("ca_cert") if vault_server.fetch("ca_cert")
       end
     end
 
