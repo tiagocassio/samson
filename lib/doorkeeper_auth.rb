@@ -4,18 +4,18 @@ module DoorkeeperAuth
 
     base.class_attribute :api_accessible
     base.before_action :access_denied?
+  end
 
-    def access_denied?
-      raise "This resource is not accessible via the API" if disallowed?
-    end
+  def access_denied?
+    raise "This resource is not accessible via the API" if disallowed?
+  end
 
-    def api_route?
-      request.fullpath.include?("/api/")
-    end
+  def api_route?
+    request.fullpath.include?("/api/")
+  end
 
-    def disallowed?
-      !self.api_accessible
-    end
+  def disallowed?
+    !api_accessible
   end
 
   module ClassMethods
