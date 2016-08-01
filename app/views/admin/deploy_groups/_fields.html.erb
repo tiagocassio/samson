@@ -13,7 +13,7 @@
     </div>
   </div>
 
-  <% if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault" %>
+  <% if SecretStorage.backend == SecretStorage::HashicorpVault %>
     <div class="form-group">
       <%= form.label :env_value, "Vault Instance", class: "col-lg-2 control-label" %>
       <div class="col-lg-4">
