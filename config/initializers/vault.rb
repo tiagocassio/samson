@@ -62,7 +62,7 @@ if ENV["SECRET_STORAGE_BACKEND"] == "SecretStorage::HashicorpVault"
           writer.token = VaultClient.auth_token(vault_server["vault_address"])
         end
         @vaults[instance].address = vault_server.fetch("vault_address")
-        @vaults[instance].ssl_ca_cert = vault_server.fetch("ca_cert") if vault_server.fetch("ca_cert")
+        @vaults[instance].ssl_ca_cert = vault_server.fetch("ca_cert") if vault_server.fetch("ca_cert", false)
       end
     end
 
